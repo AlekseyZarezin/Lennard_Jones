@@ -5,7 +5,7 @@
 #include<time.h>
 
 #define tMAX 10.
-#define DELTA 0.01
+#define DELTA 0.001
 #define N 2
 #define EPS 1.
 #define SIGMA 1.
@@ -58,7 +58,6 @@ void calcF()
 {
 	int i,j,k;
 	Utot = 0;
-	Ekin = 0;
 	double r_v[3], r2, f_r;
 	for (i=0;i<N-1;i++)
 		for (j=i+1;j<N;j++)
@@ -96,18 +95,26 @@ void calcEkin()
 void eqMot()
 {
 	int i,k;
+	double v2;
+	Ekin = 0;
 	for (i=0;i<N;i++)
+	{
+		v2 = 0;
 		for (k=0;k<3;k++)
 		{
+			v2 += (v[i][k] + 0.5 * F[i][k] * dt / m[i]) * (v[i][k] + 0.5 * F[i][k] * dt / m[i]);
 			v[i][k]+=F[i][k] * dt / m[i];
 			r[i][k]+=v[i][k] * dt;
 		}
+		Ekin += v2 * m[i] /2.;
+	}
 }
 
 void saveEnergy()
 {
 	f=fopen("statistic.txt", "a");
 	fprintf(f,"%lf %lf\n", Utot, Ekin);
+	fclose(f);
 }
 
 int main(void)
@@ -128,14 +135,25 @@ int main(void)
 	
 	//printf("%lf\n", U(0.9));
 	
-	for (n=0; n<Nt; n++)
-	{
+	calcEkin();                   
+	clearF();
+	calcF();
+	for (i=0;i<N;i++)                   //значение скорости V(1/2)
+		for (k=0;k<3;k++)
+		{
+			v[i][k] += 0.5 * F[i][k] * dt / m[i];
+			r[i][k] += v[i][k] * dt;
+		}
+	saveEnergy();          //начальная энергия
+		
+	for (n=0; n<Nt; n++)          //основной цикл
+	{		
 		clearF();
 		calcF();
-		calcEkin();
-		//save v[][],r[][],F[][],U, Ekin in file
-		saveEnergy();
+		//calcEkin();
+		//save v[][],r[][],F[][] in file
 		eqMot();
+		saveEnergy();
 	}
 	
 	system("pause");
