@@ -5,8 +5,8 @@
 #include<time.h>
 
 #define tMAX 10.
-#define DELTA 0.001
-#define N 2
+#define DELTA 0.0005
+#define N 4
 #define EPS 1.
 #define SIGMA 1.
 #define MASS_ 1.
@@ -18,7 +18,7 @@ double r[N][3], v[N][3], F[N][3], m[N];
 double sigm6 = (double)(SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA);
 FILE *f;	
 
-double U(double r2)                                        //вычисление потенциала
+inline double U(double r2)                                        //вычисление потенциала
 {
 	if (r2<=(9*SIGMA*SIGMA))
 	{
