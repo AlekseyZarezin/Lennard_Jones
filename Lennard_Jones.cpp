@@ -7,12 +7,13 @@
 #define DELTA 0.0005
 
 const int N = 5;
-double MASS_ = 1.;
+double MASS_ = 1.;             //mass
+double l_ = 10.;                //size of cell
 
 double dt = (double)DELTA;
 int Nt = (int)(tMAX/DELTA);
 double Utot, Ekin;
-double r[N][3], v[N][3], F[N][3], m[N];	
+double r[N][3], v[N][3], F[N][3], m[N], r_n[N][3], L[3], L_2[3];	
 FILE *f;
 
 inline double U(double r2)                                        //вычисление потенциала
@@ -20,7 +21,7 @@ inline double U(double r2)                                        //вычисление п
 	if (r2<=9.)
 	{
 		double r6 = r2*r2*r2;
-		return 4.*((1./(r6*r6)) - (1./r6));
+		return 4.*((1./(r6*r6)) - (1./r6)) + 0.00547944;
 	}
 	else
 	{
@@ -39,6 +40,19 @@ inline double F_r(double r2)
 	{
 		return 0.;
 	}
+}
+
+inline void n_image()
+{
+	int i,j;
+	for (i=0;i<N;i++)
+		for (j=0;j<3;j++)
+		{
+			if (r[i][j]>0)
+				r_n[i][j] = fmod(r[i][j] + L_2[j], L[j]) - L_2[j];
+			else
+				r_n[i][j] = fmod(r[i][j] - L_2[j], L[j]) + L_2[j];
+		}
 }
 
 inline void clearF()
@@ -62,7 +76,12 @@ inline void calcF()
 			r2=0;
 			for (k=0;k<3;k++)
 			{
-				r_v[k] = r[i][k] - r[j][k];
+				r_v[k] = r_n[i][k] - r_n[j][k];
+				if (r_v[k] > L_2[k])
+					r_v[k] -= L[k];
+				else
+					if (r_v[k] < (-1.)*L_2[k])
+						r_v[k] += L[k];
 				r2 += r_v[k] * r_v[k];
 			}
 			f_r = F_r(r2);
@@ -115,6 +134,11 @@ inline void saveEnergy()
 int main(void)
 {	
 	int i,j,k,n;
+	for (i=0;i<3;i++)
+	{
+		L[i] = l_;
+		L_2[i] = l_ / 2.;
+	}
 	for (i=0;i<N;i++)
 	{
 		m[i]=MASS_;
@@ -132,6 +156,7 @@ int main(void)
 	
 	calcEkin();                   
 	clearF();
+	n_image();
 	calcF();
 	for (i=0;i<N;i++)                   //значение скорости V(1/2)
 		for (k=0;k<3;k++)
@@ -144,6 +169,7 @@ int main(void)
 	for (n=0; n<Nt; n++)          //основной цикл
 	{		
 		clearF();
+		n_image();
 		calcF();
 		//calcEkin();
 		//save v[][],r[][],F[][] in file
