@@ -1,29 +1,26 @@
 #include<stdio.h>
 #include<stdlib.h>
-//#include<string.h>
 #include<math.h>
 #include<time.h>
 
 #define tMAX 10.
 #define DELTA 0.0005
-#define N 4
-#define EPS 1.
-#define SIGMA 1.
-#define MASS_ 1.
+
+const int N = 5;
+double MASS_ = 1.;
 
 double dt = (double)DELTA;
 int Nt = (int)(tMAX/DELTA);
 double Utot, Ekin;
 double r[N][3], v[N][3], F[N][3], m[N];	
-double sigm6 = (double)(SIGMA*SIGMA*SIGMA*SIGMA*SIGMA*SIGMA);
-FILE *f;	
+FILE *f;
 
 inline double U(double r2)                                        //вычисление потенциала
 {
-	if (r2<=(9*SIGMA*SIGMA))
+	if (r2<=9.)
 	{
 		double r6 = r2*r2*r2;
-		return 4*(double)EPS*((sigm6*sigm6/(r6*r6)) - (sigm6/r6));
+		return 4.*((1./(r6*r6)) - (1./r6));
 	}
 	else
 	{
@@ -31,12 +28,12 @@ inline double U(double r2)                                        //вычисление п
 	}
 }
 
-double F_r(double r2)
+inline double F_r(double r2)
 {
-	if (r2<=(9*SIGMA*SIGMA))
+	if (r2<=9.)
 	{
 		double r6 = r2*r2*r2;		
-		return 4*(double)EPS*( 12.*(sigm6*sigm6/(r6*r6*r2)) - 6.*(sigm6/(r6*r2)) );
+		return 4.*( (12./(r6*r6*r2)) - (6./(r6*r2)) );
 	}
 	else
 	{
@@ -44,7 +41,7 @@ double F_r(double r2)
 	}
 }
 
-void clearF()
+inline void clearF()
 {
 	int i,j;
 	for (i=0;i<N;i++)
@@ -54,7 +51,7 @@ void clearF()
 		}
 }
 
-void calcF()
+inline void calcF()
 {
 	int i,j,k;
 	Utot = 0;
@@ -78,7 +75,7 @@ void calcF()
 		}
 }
 
-void calcEkin()
+inline void calcEkin()
 {
 	double v2;
 	int i,k;
@@ -92,7 +89,7 @@ void calcEkin()
 	}
 }
 
-void eqMot()
+inline void eqMot()
 {
 	int i,k;
 	double v2;
@@ -110,11 +107,9 @@ void eqMot()
 	}
 }
 
-void saveEnergy()
+inline void saveEnergy()
 {
-	f=fopen("statistic.txt", "a");
 	fprintf(f,"%lf %lf\n", Utot, Ekin);
-	fclose(f);
 }
 
 int main(void)
@@ -122,7 +117,7 @@ int main(void)
 	int i,j,k,n;
 	for (i=0;i<N;i++)
 	{
-		m[i]=(double)MASS_;
+		m[i]=MASS_;
 	}
 	for (i=0;i<N;i++)
 	{
@@ -133,7 +128,7 @@ int main(void)
 		scanf("%lf %lf %lf", &(v[i][0]), &(v[i][1]), &(v[i][3]));
 	}
 	
-	//printf("%lf\n", U(0.9));
+	f=fopen("statistic.txt", "a");
 	
 	calcEkin();                   
 	clearF();
@@ -156,6 +151,7 @@ int main(void)
 		saveEnergy();
 	}
 	
+	fclose(f);
 	system("pause");
 	return 0;
 }
