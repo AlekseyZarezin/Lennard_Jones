@@ -6,9 +6,11 @@
 #define tMAX 10.
 #define DELTA 0.0005
 
-const int N = 5;
+const int N = 100;
 double MASS_ = 1.;             //mass
 double l_ = 10.;                //size of cell
+double initV2 = 3.* 1.3 / MASS_, initV = sqrt(initV2);
+double rmin = pow(10, (1. / 3));          //постоянная решетки
 
 double dt = (double)DELTA;
 int Nt = (int)(tMAX/DELTA);
@@ -128,12 +130,41 @@ inline void eqMot()
 
 inline void saveEnergy()
 {
-	fprintf(f,"%lf %lf\n", Utot, Ekin);
+	fprintf(f,"%lf %lf\n", Utot, Ekin, r[1][1]);
 }
 
+inline void defVel()
+{
+	int i;	
+	for (i=0;i<N;i++)
+	{
+		v[i][0] = (rand() * 2. / RAND_MAX - 1.) * initV;
+		v[i][1] = (rand() * 2. / RAND_MAX - 1.) * sqrt(initV2 - v[i][0] * v[i][0]);
+		v[i][2] = sqrt( fabs(initV2 - v[i][0] * v[i][0] - v[i][1] * v[i][1]) );
+	}
+}
+
+inline void defPos_Cryst()
+{
+	int i, j, k, count = 0, n = (int)pow((double)(N), (1./3))+2;
+	printf("%d\n", n);
+	for (i=0;i<n;i++)
+		for (j=0;j<n;j++)
+			for (k=0;k<n;k++)
+			{
+				r[count][0] = (double)(i*rmin);
+				r[count][1] = (double)(j*rmin);
+				r[count][2] = (double)(k*rmin);
+				count++;
+				if (count==N)
+					return;
+			}
+}
+  
 int main(void)
-{	
-	int i,j,k,n;
+{
+	srand(time(NULL));	
+	int i,j,k,n,t;
 	for (i=0;i<3;i++)
 	{
 		L[i] = l_;
@@ -143,17 +174,20 @@ int main(void)
 	{
 		m[i]=MASS_;
 	}
-	for (i=0;i<N;i++)
-	{
-		scanf("%lf %lf %lf", &(r[i][0]), &(r[i][1]), &(r[i][3]));
-	}
-	for (i=0;i<N;i++)
-	{
-		scanf("%lf %lf %lf", &(v[i][0]), &(v[i][1]), &(v[i][3]));
-	}
+	//for (i=0;i<N;i++)
+	//{
+	//	scanf("%lf %lf %lf", &(r[i][0]), &(r[i][1]), &(r[i][3]));
+	//}
+	//for (i=0;i<N;i++)
+	//{
+	//	scanf("%lf %lf %lf", &(v[i][0]), &(v[i][1]), &(v[i][3]));
+	//}
+	defPos_Cryst();
+	defVel();
 	
-	f=fopen("statistic.txt", "a");
-	
+	f=fopen("statistic.txt", "w");
+
+	t = clock();	
 	calcEkin();                   
 	clearF();
 	n_image();
@@ -176,6 +210,8 @@ int main(void)
 		eqMot();
 		saveEnergy();
 	}
+	t = clock() - t;
+	printf("%f\n", (float)(t * 1. / CLOCKS_PER_SEC));
 	
 	fclose(f);
 	system("pause");
