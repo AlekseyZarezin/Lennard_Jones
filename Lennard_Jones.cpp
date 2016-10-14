@@ -3,15 +3,17 @@
 #include<math.h>
 #include<time.h>
 
-#define tMAX 10.
+#define tMAX 25.
 #define DELTA 0.0005
 
-const int N = 100;
+const int n = 8;
+const int N = n*n*n;           //total number of particles
 double MASS_ = 1.;             //mass
-double l_ = 10.;                //size of cell
-double initV2 = 3.* 1.3 / MASS_, initV = sqrt(initV2);
+double initV2 = 3. , initV = sqrt(initV2);      //скорость теплового движения
 double rmin = pow(10, (1. / 3));          //постоянная решетки
+double l_ = n * rmin;                //size of cell
 
+double lambda, deltE, E_av, E_= 3./ 2. * 1.3;
 double dt = (double)DELTA;
 int Nt = (int)(tMAX/DELTA);
 double Utot, Ekin;
@@ -146,8 +148,7 @@ inline void defVel()
 
 inline void defPos_Cryst()
 {
-	int i, j, k, count = 0, n = (int)pow((double)(N), (1./3))+2;
-	printf("%d\n", n);
+	int i, j, k, count = 0;
 	for (i=0;i<n;i++)
 		for (j=0;j<n;j++)
 			for (k=0;k<n;k++)
@@ -159,6 +160,22 @@ inline void defPos_Cryst()
 				if (count==N)
 					return;
 			}
+}
+
+inline void termo_B()
+{
+	E_av = Ekin * 1. / N;
+	deltE = fabs(E_av - E_) * 1. / E_;
+	if (deltE >= 0.04)
+	{
+		int i,j;
+		lambda = sqrt(1. + (0.001/2.) * (E_ * 1. / E_av - 1));
+		for (i = 1; i < N; i++)
+			for (j=0;j<3;j++)
+			{
+				v[i][j] *= lambda;
+			}		
+	}
 }
   
 int main(void)
@@ -200,7 +217,7 @@ int main(void)
 		}
 	saveEnergy();          //начальная энергия
 		
-	for (n=0; n<Nt; n++)          //основной цикл
+	for (n=0; n<Nt; n++)          //основной цикл с термостатом
 	{		
 		clearF();
 		n_image();
@@ -209,6 +226,7 @@ int main(void)
 		//save v[][],r[][],F[][] in file
 		eqMot();
 		saveEnergy();
+		termo_B();
 	}
 	t = clock() - t;
 	printf("%f\n", (float)(t * 1. / CLOCKS_PER_SEC));
