@@ -3,22 +3,28 @@
 #include<math.h>
 #include<time.h>
 
-#define tMAX 25.
+#define tMAX 20.
 #define DELTA 0.0005
 
-const int n = 8;
+const int n = 6;
 const int N = n*n*n;           //total number of particles
 double MASS_ = 1.;             //mass
-double initV2 = 3. , initV = sqrt(initV2);      //скорость теплового движения
+double initV2 = 0.5 , initV = sqrt(initV2);      //скорость теплового движения
 double rmin = pow(10, (1. / 3));          //постоянная решетки
 double l_ = n * rmin;                //size of cell
 
+double dr = 0.01, V_tot = l_*l_*l_;         //шаг для опред бин корреляции
+//const int K = (int)(l_ / 2. / dr);
+const int N_r = 646;
 double lambda, deltE, E_av, E_= 3./ 2. * 1.3;
+double E_os = 0.8 / sqrt((double)N);
 double dt = (double)DELTA;
 int Nt = (int)(tMAX/DELTA);
+int rel = (int)(7.5/dt);
 double Utot, Ekin;
 double r[N][3], v[N][3], F[N][3], m[N], r_n[N][3], L[3], L_2[3];	
-FILE *f;
+double g[N_r];
+FILE *f, *f_b;
 
 inline double U(double r2)                                        //вычисление потенциала
 {
@@ -132,7 +138,18 @@ inline void eqMot()
 
 inline void saveEnergy()
 {
-	fprintf(f,"%lf %lf\n", Utot, Ekin, r[1][1]);
+	fprintf(f,"%lf %lf\n", Utot, Ekin);
+}
+
+inline void save_bin_cor()
+{
+	int i;
+	double r;
+	for (i=0;i<N_r;i++)
+	{
+		r = (i + 0.5)*dr;
+		fprintf(f_b,"%lf %lf\n", r, (g[i] / (4.*3.14159265*r*r*2.*dr)) );
+	}
 }
 
 inline void defVel()
@@ -162,26 +179,56 @@ inline void defPos_Cryst()
 			}
 }
 
-inline void termo_B()
+inline char termo_B()
 {
 	E_av = Ekin * 1. / N;
 	deltE = fabs(E_av - E_) * 1. / E_;
-	if (deltE >= 0.04)
+	int i,j;
+	lambda = sqrt(1. + (0.0005/1.) * (E_ * 1. / E_av - 1));
+	for (i = 1; i < N; i++)
+		for (j=0;j<3;j++)
+		{
+			v[i][j] *= lambda;
+		}
+	return (deltE < E_os);		
+}
+
+inline void clearBin()
+{
+	int i;
+	for (i=0;i<N_r;i++)
 	{
-		int i,j;
-		lambda = sqrt(1. + (0.001/2.) * (E_ * 1. / E_av - 1));
-		for (i = 1; i < N; i++)
-			for (j=0;j<3;j++)
-			{
-				v[i][j] *= lambda;
-			}		
+		g[i]=0;
 	}
+}
+
+inline void bin_cor()
+{
+	int i,j,k,t;
+	double r_v[3], r2;
+	for (i=0;i<N-1;i++)
+		for (j=i+1;j<N;j++)
+		{
+			r2=0;
+			for (k=0;k<3;k++)
+			{
+				r_v[k] = r_n[i][k] - r_n[j][k];
+				if (r_v[k] > L_2[k])
+					r_v[k] -= L[k];
+				else
+					if (r_v[k] < (-1.)*L_2[k])
+						r_v[k] += L[k];
+				r2 += r_v[k] * r_v[k];
+			}
+			if ((t = (int)(floor(sqrt(r2)/dr))) < N_r)
+				g[t]+=1;
+		}
 }
   
 int main(void)
 {
 	srand(time(NULL));	
-	int i,j,k,n,t;
+	int i,j,k,n,t,counter;
 	for (i=0;i<3;i++)
 	{
 		L[i] = l_;
@@ -200,10 +247,9 @@ int main(void)
 	//	scanf("%lf %lf %lf", &(v[i][0]), &(v[i][1]), &(v[i][3]));
 	//}
 	defPos_Cryst();
-	defVel();
-	
+	defVel();	
 	f=fopen("statistic.txt", "w");
-
+	f_b=fopen("bin_cor.txt", "w");
 	t = clock();	
 	calcEkin();                   
 	clearF();
@@ -216,22 +262,40 @@ int main(void)
 			r[i][k] += v[i][k] * dt;
 		}
 	saveEnergy();          //начальная энергия
-		
-	for (n=0; n<Nt; n++)          //основной цикл с термостатом
+	while (1)          //цикл с термостатом и условием выключения
 	{		
 		clearF();
 		n_image();
 		calcF();
-		//calcEkin();
 		//save v[][],r[][],F[][] in file
 		eqMot();
 		saveEnergy();
-		termo_B();
+		if (termo_B())
+		{
+			counter+=1;
+			if (counter == rel)
+				break;
+		}
+		else
+			counter = 0;
 	}
+	printf("general loop\n");
+	clearBin();
+	for (n=0; n<Nt; n++)          //основной цикл
+	{	
+		bin_cor();	
+		clearF();
+		n_image();
+		calcF();
+		//save v[][],r[][],F[][] in file
+		eqMot();
+		saveEnergy();
+	}	
+	save_bin_cor();
 	t = clock() - t;
-	printf("%f\n", (float)(t * 1. / CLOCKS_PER_SEC));
-	
+	printf("%f\n", (float)(t * 1. / CLOCKS_PER_SEC));	
 	fclose(f);
+	fclose(f_b);
 	system("pause");
 	return 0;
 }
