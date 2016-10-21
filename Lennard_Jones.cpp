@@ -6,21 +6,20 @@
 #define tMAX 20.
 #define DELTA 0.0005
 
-const int n = 6;
+const int n = 8;
 const int N = n*n*n;           //total number of particles
 double MASS_ = 1.;             //mass
 double initV2 = 0.5 , initV = sqrt(initV2);      //скорость теплового движени€
-double rmin = pow(10, (1. / 3));          //посто€нна€ решетки
-double l_ = n * rmin;                //size of cell
+const double rmin = pow(10, (1. / 3));          //посто€нна€ решетки
+const double l_ = n * rmin;                //size of cell
 
-double dr = 0.01, V_tot = l_*l_*l_;         //шаг дл€ опред бин коррел€ции
-//const int K = (int)(l_ / 2. / dr);
-const int N_r = 646;
+const double dr = 0.01, V_tot = l_*l_*l_;         //шаг дл€ опред бин коррел€ции
+const int N_r = (int)(l_ / 2. / dr);            //размер массива дл€ бинарной коррел€ции
 double lambda, deltE, E_av, E_= 3./ 2. * 1.3;
-double E_os = 0.8 / sqrt((double)N);
+double E_os = 0.8 / sqrt((double)N);              //допустимые колебани€ энергии (дл€ выключени€ термостата)
 double dt = (double)DELTA;
 int Nt = (int)(tMAX/DELTA);
-int rel = (int)(7.5/dt);
+int rel = (int)(10./dt);             //врем€ ожидани€ термостата (если колебани€ энергии < E_os в течение 10, то термостат выключаетс€)
 double Utot, Ekin;
 double r[N][3], v[N][3], F[N][3], m[N], r_n[N][3], L[3], L_2[3];	
 double g[N_r];
@@ -144,11 +143,11 @@ inline void saveEnergy()
 inline void save_bin_cor()
 {
 	int i;
-	double r;
+	double r, V_k = 0.01*4./3.*3.14159265*(l_/2.)*(l_/2.)*(l_/2.);
 	for (i=0;i<N_r;i++)
 	{
 		r = (i + 0.5)*dr;
-		fprintf(f_b,"%lf %lf\n", r, (g[i] / (4.*3.14159265*r*r*2.*dr)) );
+		fprintf(f_b,"%lf %lf\n", r, (g[i] / (4.*3.14159265*r*r*dr*Nt*V_k)) );
 	}
 }
 
@@ -238,14 +237,6 @@ int main(void)
 	{
 		m[i]=MASS_;
 	}
-	//for (i=0;i<N;i++)
-	//{
-	//	scanf("%lf %lf %lf", &(r[i][0]), &(r[i][1]), &(r[i][3]));
-	//}
-	//for (i=0;i<N;i++)
-	//{
-	//	scanf("%lf %lf %lf", &(v[i][0]), &(v[i][1]), &(v[i][3]));
-	//}
 	defPos_Cryst();
 	defVel();	
 	f=fopen("statistic.txt", "w");
@@ -267,7 +258,6 @@ int main(void)
 		clearF();
 		n_image();
 		calcF();
-		//save v[][],r[][],F[][] in file
 		eqMot();
 		saveEnergy();
 		if (termo_B())
@@ -287,7 +277,6 @@ int main(void)
 		clearF();
 		n_image();
 		calcF();
-		//save v[][],r[][],F[][] in file
 		eqMot();
 		saveEnergy();
 	}	
